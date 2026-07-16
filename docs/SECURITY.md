@@ -1,0 +1,10 @@
+# Security, privacy and consent
+
+Voice cloning can enable impersonation. Voice2 requires an explicit consent checkbox before storing a reference. Users must have authority to use the voice and remain responsible for generated content.
+
+Reference audio, transcripts, features, generated audio and tuning results stay below `VOICE2_DATA_DIR` and are ignored by Git. The server listens on loopback by default. Do not expose it to a LAN or the internet without authentication, TLS, rate limiting and an explicit data-retention policy.
+
+Remote Providers are disabled by default and must require explicit configuration and per-use or durable authorization. Never place secrets in manifests, logs or URLs. Treat model checkpoints as untrusted supply-chain inputs: use pinned sources, checksums, safe tensor formats where possible, isolated loading and license review.
+
+Report security issues privately to the repository owner rather than posting exploitable voice samples publicly.
+

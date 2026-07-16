@@ -1,0 +1,4 @@
+interface:
+  display_name: "Integrate Realtime Provider"
+  short_description: "Add and benchmark Voice2 providers"
+  default_prompt: "Use $integrate-realtime-provider to add and validate a new Voice2 provider."

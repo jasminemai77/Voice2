@@ -1,0 +1,21 @@
+# Third-party notices
+
+Voice2 source code is Apache-2.0. This file records evaluated integrations; inclusion here does not mean weights are bundled.
+
+| Component | Role | Upstream license | Default distribution |
+|---|---|---|---|
+| VoxCPM-0.5B | Optional zero-shot TTS | Apache-2.0 (verify model card at install time) | Not installed; no weights bundled |
+| CosyVoice | Planned TTS adapter | Apache-2.0 | Not bundled |
+| GPT-SoVITS | Research/backup adapter | MIT | Not bundled |
+| OpenVoice V2 | Planned low-resource adapter | MIT | Not bundled |
+| Silero VAD | Planned VAD | MIT | Not bundled |
+| faster-whisper | Planned ASR | MIT | Not bundled |
+| llama.cpp | Planned local LLM runtime | MIT | Not bundled |
+| Pipecat | Architecture reference | BSD-2-Clause | Not bundled |
+| LiveKit Agents | Planned transport reference | Apache-2.0 | Not bundled |
+| FastAPI | HTTP/WebSocket framework | MIT | Python dependency |
+| React / Next.js / vinext | Web client/runtime | MIT | Node dependency |
+| Tauri | Windows desktop shell | Apache-2.0/MIT | Build dependency |
+
+Before release, lock exact versions, preserve their notices, generate an SBOM, and verify each selected model repository because code and weights can use different terms.
+
