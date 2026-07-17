@@ -27,7 +27,7 @@ dev = [
   "pytest-asyncio>=0.25,<1",
   "ruff>=0.9,<1",
 ]
-voxcpm = ["voxcpm>=0.1"]
+voxcpm = ["voxcpm==2.0.3; python_version < '3.13'"]
 
 [project.scripts]
 voice2 = "voice2.main:run"
@@ -35,6 +35,8 @@ voice2 = "voice2.main:run"
 [project.entry-points."voice2.providers"]
 demo = "voice2.providers.demo:DemoTtsProvider"
 voxcpm = "voice2.providers.voxcpm:VoxCpmProvider"
+openvoice = "voice2.providers.openvoice:OpenVoiceProvider"
+cosyvoice = "voice2.providers.cosyvoice:CosyVoiceProvider"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/voice2"]

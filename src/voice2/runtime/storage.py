@@ -2,8 +2,9 @@ from __future__ import annotations
 
 import hashlib
 import json
-import wave
 from pathlib import Path
+
+import soundfile
 
 from voice2.domain import VoiceRecord
 
@@ -34,12 +35,14 @@ class VoiceStore:
         )
 
     @staticmethod
-    def _wav_duration(path: Path) -> float | None:
+    def _audio_duration(path: Path) -> float:
         try:
-            with wave.open(str(path), "rb") as wav:
-                return wav.getnframes() / wav.getframerate()
-        except (wave.Error, OSError, ZeroDivisionError):
-            return None
+            info = soundfile.info(str(path))
+            if info.samplerate <= 0 or info.frames <= 0 or info.channels <= 0:
+                raise ValueError("Reference audio has invalid stream metadata")
+            return info.frames / info.samplerate
+        except (OSError, RuntimeError, ValueError) as exc:
+            raise ValueError("Reference audio could not be decoded") from exc
 
     def create(
         self,
@@ -69,11 +72,15 @@ class VoiceStore:
         )
         destination = self.root / f"{record.id}{extension}"
         destination.write_bytes(content)
-        record.audio_path = str(destination.resolve())
-        record.duration_seconds = self._wav_duration(destination) if extension == ".wav" else None
-        if record.duration_seconds is not None and not 5 <= record.duration_seconds <= 30:
+        try:
+            record.duration_seconds = self._audio_duration(destination)
+        except ValueError:
             destination.unlink(missing_ok=True)
-            raise ValueError("WAV reference audio must be 5 to 30 seconds")
+            raise
+        if not 5 <= record.duration_seconds <= 30:
+            destination.unlink(missing_ok=True)
+            raise ValueError("Reference audio must be 5 to 30 seconds")
+        record.audio_path = str(destination.resolve())
         self._voices[record.id] = record
         self._save()
         return record
@@ -91,4 +98,3 @@ class VoiceStore:
         Path(voice.audio_path).unlink(missing_ok=True)
         self._save()
         return True
-

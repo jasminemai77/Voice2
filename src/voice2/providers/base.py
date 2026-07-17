@@ -17,7 +17,7 @@ class BaseProvider(ABC):
         return None
 
     async def health(self) -> dict[str, object]:
-        return {"ready": True}
+        return {"ready": True, "loaded": False}
 
 
 class TtsProvider(BaseProvider, ABC):

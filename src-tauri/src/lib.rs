@@ -29,10 +29,9 @@ pub fn run() {
                     if let Some(mut child) = guard.take() {
                         let _ = child.kill();
                     }
-                }
+                };
             }
         })
         .run(tauri::generate_context!())
         .expect("failed to run Voice2 desktop application");
 }
-

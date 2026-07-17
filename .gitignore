@@ -47,6 +47,8 @@ next-env.d.ts
 /.voice2-data/
 /models/
 /voices/
+/Voice/
+/.agents/environment.local.md
 /generated/
 /benchmark-results/
 *.wav
@@ -65,3 +67,4 @@ __pycache__/
 .mypy_cache/
 .codex-dev*.log
 /src-tauri/target/
+/src-tauri/gen/

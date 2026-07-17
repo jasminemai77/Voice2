@@ -1,0 +1,47 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "Voice2: Desktop Dev",
+      "type": "shell",
+      "command": "npm run desktop:dev",
+      "options": {
+        "cwd": "${workspaceFolder}",
+        "env": {
+          "VOICE2_PYTHON": "${workspaceFolder}\\.venv\\Scripts\\python.exe"
+        }
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "Voice2: Desktop Build (no bundle)",
+      "type": "shell",
+      "command": "npm run desktop:build -- --no-bundle",
+      "options": { "cwd": "${workspaceFolder}" },
+      "group": "build",
+      "problemMatcher": []
+    },
+    {
+      "label": "Voice2: API Server",
+      "type": "process",
+      "command": "${workspaceFolder}\\.venv\\Scripts\\python.exe",
+      "args": ["-m", "voice2.main"],
+      "options": { "cwd": "${workspaceFolder}" },
+      "problemMatcher": []
+    },
+    {
+      "label": "Voice2: Web Dev",
+      "type": "shell",
+      "command": "npm run dev",
+      "options": { "cwd": "${workspaceFolder}" },
+      "problemMatcher": []
+    },
+    {
+      "label": "Voice2: Verify Desktop Toolchain",
+      "type": "shell",
+      "command": "npx tauri info",
+      "options": { "cwd": "${workspaceFolder}" },
+      "problemMatcher": []
+    }
+  ]
+}

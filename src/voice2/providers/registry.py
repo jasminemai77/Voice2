@@ -1,11 +1,14 @@
 from __future__ import annotations
 
+import asyncio
 from importlib.metadata import entry_points
 
 from voice2.domain import ProviderKind, ProviderManifest
 
 from .base import BaseProvider, TtsProvider
+from .cosyvoice import CosyVoiceProvider
 from .demo import DemoTtsProvider
+from .openvoice import OpenVoiceProvider
 from .voxcpm import VoxCpmProvider
 
 
@@ -14,6 +17,8 @@ class ProviderRegistry:
         self._providers: dict[str, BaseProvider] = {}
         self.register(DemoTtsProvider())
         self.register(VoxCpmProvider())
+        self.register(OpenVoiceProvider())
+        self.register(CosyVoiceProvider())
         self._load_entry_points()
 
     def _load_entry_points(self) -> None:
@@ -41,3 +46,12 @@ class ProviderRegistry:
             raise TypeError(f"{provider_id} is not a TTS provider")
         return provider
 
+    async def stop_all(self, except_id: str | None = None) -> None:
+        await asyncio.gather(
+            *(
+                provider.stop()
+                for provider_id, provider in self._providers.items()
+                if provider_id != except_id
+            ),
+            return_exceptions=True,
+        )
