@@ -35,6 +35,7 @@ voice2 = "voice2.main:run"
 [project.entry-points."voice2.providers"]
 demo = "voice2.providers.demo:DemoTtsProvider"
 voxcpm = "voice2.providers.voxcpm:VoxCpmProvider"
+openvoice = "voice2.providers.openvoice:OpenVoiceProvider"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/voice2"]

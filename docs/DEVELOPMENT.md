@@ -43,3 +43,19 @@ VoxCPM requires Python below 3.13, so it runs outside the Python 3.13 API enviro
 ```
 
 Set `VOICE2_ENABLE_VOXCPM=1` only after the runtime passes dependency and CUDA checks. Availability does not bypass Voice2's measured RAM/VRAM safety budget.
+
+## Optional OpenVoice CPU fallback
+
+Keep the compatibility runtime, pinned upstream source, and official model checkout
+outside the repository:
+
+```powershell
+[Environment]::SetEnvironmentVariable("VOICE2_OPENVOICE_PYTHON", "G:\Voice2Data\envs\openvoice\Scripts\python.exe", "User")
+[Environment]::SetEnvironmentVariable("VOICE2_OPENVOICE_SOURCE", "G:\Voice2Data\runtimes\OpenVoice", "User")
+[Environment]::SetEnvironmentVariable("VOICE2_OPENVOICE_MODEL", "G:\Voice2Data\models\OpenVoiceV1", "User")
+[Environment]::SetEnvironmentVariable("VOICE2_ENABLE_OPENVOICE", "1", "User")
+```
+
+The Provider is experimental, CPU-only, and non-streaming. Its worker forces UTF-8,
+disables numba JIT, stores caches under `VOICE2_DATA_DIR`, and uses soundfile/scipy for
+reference audio instead of the upstream Whisper/PyAV path.

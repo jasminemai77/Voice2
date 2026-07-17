@@ -7,7 +7,8 @@ Voice2 source code is Apache-2.0. This file records evaluated integrations; incl
 | VoxCPM runtime 2.0.3 / VoxCPM-0.5B revision `f67d35a…` | Optional zero-shot TTS | Apache-2.0 | Runtime and verified weights are local-only on G:; neither is bundled or committed |
 | CosyVoice | Planned TTS adapter | Apache-2.0 | Not bundled |
 | GPT-SoVITS | Research/backup adapter | MIT | Not bundled |
-| OpenVoice V2 | Planned low-resource adapter | MIT | Not bundled |
+| OpenVoice runtime `74a1d147` / V1 weights `c70fc8b` | Experimental CPU zero-shot fallback | MIT | Pinned source and verified Git LFS weights are local-only on G:; neither is bundled or committed |
+| MeloTTS `2091453` | Evaluated base TTS for OpenVoice V2 | MIT | Not bundled or enabled; eager multilingual downloads make the current upstream unsuitable for the offline Windows fallback |
 | Silero VAD | Planned VAD | MIT | Not bundled |
 | faster-whisper | Planned ASR | MIT | Not bundled |
 | llama.cpp | Planned local LLM runtime | MIT | Not bundled |
