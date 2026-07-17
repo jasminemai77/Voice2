@@ -47,6 +47,7 @@ next-env.d.ts
 /.voice2-data/
 /models/
 /voices/
+/Voice/
 /generated/
 /benchmark-results/
 *.wav

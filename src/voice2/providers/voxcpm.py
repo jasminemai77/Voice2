@@ -197,6 +197,16 @@ class VoxCpmProvider(TtsProvider):
             await asyncio.gather(self._stderr_task, return_exceptions=True)
             self._stderr_task = None
 
+    async def health(self) -> dict[str, object]:
+        running = self._process is not None and self._process.returncode is None
+        return {
+            "ready": running,
+            "loaded": running,
+            "variant_id": self._active_variant_id,
+            "sample_rate": self._sample_rate,
+            "mode": "native_audio_stream",
+        }
+
     def _worker_failure(self, exc: Exception) -> RuntimeError:
         detail = "\n".join(self._stderr_tail)[-4000:]
         suffix = f" Worker log:\n{detail}" if detail else ""

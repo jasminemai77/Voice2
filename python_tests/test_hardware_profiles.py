@@ -1,6 +1,12 @@
 from pathlib import Path
 
-from voice2.domain import HardwareProfile, PerformanceProfile
+from voice2.domain import (
+    HardwareProfile,
+    PerformanceProfile,
+    ProviderKind,
+    ProviderManifest,
+    ProviderVariant,
+)
 from voice2.domain.models import GpuProfile
 from voice2.providers import ProviderRegistry
 from voice2.runtime import HardwareDetector, ProfileManager
@@ -60,6 +66,31 @@ def test_auto_profile_always_has_local_demo_fallback(tmp_path: Path):
     selected = manager.select(ProviderRegistry().manifests(), hardware(None))
     assert selected.provider_id == "demo"
     assert selected.variant.device == "cpu"
+
+
+def test_real_provider_always_precedes_development_signal(tmp_path: Path):
+    manager = ProfileManager(tmp_path)
+    demo = ProviderRegistry().get("demo").manifest()
+    real = ProviderManifest(
+        id="real-local",
+        name="Real local TTS",
+        kind=ProviderKind.TTS,
+        version="1",
+        license="MIT",
+        available=True,
+        variants=[
+            ProviderVariant(
+                id="real-cpu",
+                device="cpu",
+                precision="float32",
+                estimated_ram_mib=1024,
+                quality_score=0.6,
+                speed_score=0.5,
+            )
+        ],
+    )
+    selected = manager.select([demo, real], hardware(None))
+    assert selected.provider_id == "real-local"
 
 
 def test_profile_persists(tmp_path: Path):

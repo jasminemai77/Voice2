@@ -14,7 +14,8 @@ Default base URL: `http://127.0.0.1:8765`. OpenAPI is available at `/docs`.
 | GET | `/api/v1/runtime/profiles` | Available selections |
 | PUT | `/api/v1/runtime/profile` | Select Auto/Fast/Quality/Custom |
 | POST | `/api/v1/runtime/benchmark` | Run a bounded local short benchmark |
-| GET | `/api/v1/runtime/status` | Active model, queue and last metrics |
+| POST | `/api/v1/runtime/prewarm` | Load the selected local Provider in the background |
+| GET | `/api/v1/runtime/status` | Active model, queue, warm state, capabilities, exclusions and recent metrics |
 | POST | `/api/v1/sessions` | Create cascade or S2S session |
 | POST | `/api/v1/sessions/{id}/cancel` | Interrupt and rotate the turn |
 | GET | `/api/v1/sessions/{id}/metrics` | Session metrics |
@@ -22,3 +23,8 @@ Default base URL: `http://127.0.0.1:8765`. OpenAPI is available at `/docs`.
 
 Errors use `{ "code", "message", "details" }`. New v1 fields are additive. Streaming speech emits mono signed 16-bit little-endian PCM and includes `X-Voice2-Audio-Format`.
 
+`runtime/status` separates total TTFA, inference TTFA and scheduler queue wait. It also
+labels delivery as `native_stream` or `post_generation_chunks`, records whether the
+model was already warm, and reports why otherwise registered Providers were excluded.
+The recent metrics list is bounded in memory and contains no reference transcript or
+audio.

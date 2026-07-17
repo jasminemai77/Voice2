@@ -40,3 +40,11 @@ took 10.874 s for 1.741 s of audio (RTF 6.244), while the immediately following 
 on the same resident worker took 1.443 s for 1.730 s of audio (RTF 0.834). This confirms
 the speaker-embedding cache and resident-model path, but also makes startup prewarming
 mandatory for interactive use.
+
+A second evaluation used a consented 25.4-second real MP3 reference with an accurate
+local transcript and Chinese, numeric, English and repeated Chinese prompts. All nine
+requests succeeded. The eight hot requests had mean RTF 0.775 and maximum RTF 0.884;
+the cold request had RTF 3.528. Model-internal speaker-embedding cosine similarity had
+mean 0.8944 and minimum 0.8712. This diagnostic helps catch regressions but is not a
+substitute for blinded listening, intelligibility, naturalness, or impersonation-risk
+review. Private inputs, generated samples and the detailed report remain outside Git.

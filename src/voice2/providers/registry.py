@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 from importlib.metadata import entry_points
 
 from voice2.domain import ProviderKind, ProviderManifest
@@ -42,3 +43,13 @@ class ProviderRegistry:
         if provider.manifest().kind != ProviderKind.TTS or not isinstance(provider, TtsProvider):
             raise TypeError(f"{provider_id} is not a TTS provider")
         return provider
+
+    async def stop_all(self, except_id: str | None = None) -> None:
+        await asyncio.gather(
+            *(
+                provider.stop()
+                for provider_id, provider in self._providers.items()
+                if provider_id != except_id
+            ),
+            return_exceptions=True,
+        )

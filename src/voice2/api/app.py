@@ -3,7 +3,9 @@ from __future__ import annotations
 import asyncio
 import os
 import time
+from collections import deque
 from collections.abc import AsyncIterator
+from contextlib import asynccontextmanager
 from pathlib import Path
 from typing import Annotated, Any
 
@@ -61,6 +63,10 @@ class AppState:
             self.registry.manifests(), self.hardware
         )
         self.last_metrics: dict[str, Any] = {}
+        self.metrics_history: deque[dict[str, Any]] = deque(maxlen=20)
+        self.prewarm_status: dict[str, Any] = {"state": "idle"}
+        self.prewarm_task: asyncio.Task[None] | None = None
+        self._prewarm_lock = asyncio.Lock()
 
     def refresh_selection(self, requested: PerformanceProfile | None = None):
         self.hardware = self.hardware_detector.detect()
@@ -68,6 +74,54 @@ class AppState:
             self.registry.manifests(), self.hardware, requested
         )
         return self.last_selection
+
+    async def prewarm(self) -> None:
+        async with self._prewarm_lock:
+            selection = self.refresh_selection()
+            provider = self.registry.tts(selection.provider_id)
+            health = await provider.health()
+            if health.get("loaded") and health.get("variant_id") == selection.variant.id:
+                self.prewarm_status = {
+                    "state": "ready",
+                    "provider_id": selection.provider_id,
+                    "variant_id": selection.variant.id,
+                    "elapsed_seconds": 0.0,
+                    "reused": True,
+                }
+                return
+            self.prewarm_status = {
+                "state": "warming",
+                "provider_id": selection.provider_id,
+                "variant_id": selection.variant.id,
+            }
+            started = time.perf_counter()
+            try:
+                async with self.scheduler.slot():
+                    await self.registry.stop_all(except_id=selection.provider_id)
+                    await provider.start(selection.variant)
+                self.prewarm_status = {
+                    "state": "ready",
+                    "provider_id": selection.provider_id,
+                    "variant_id": selection.variant.id,
+                    "elapsed_seconds": round(time.perf_counter() - started, 3),
+                    "reused": False,
+                }
+            except Exception as exc:
+                self.prewarm_status = {
+                    "state": "error",
+                    "provider_id": selection.provider_id,
+                    "variant_id": selection.variant.id,
+                    "elapsed_seconds": round(time.perf_counter() - started, 3),
+                    "error": str(exc),
+                }
+
+    def schedule_prewarm(self) -> None:
+        if self.prewarm_task is None or self.prewarm_task.done():
+            self.prewarm_task = asyncio.create_task(self.prewarm())
+
+    def record_metrics(self, metrics: dict[str, Any]) -> None:
+        self.last_metrics = metrics
+        self.metrics_history.append(metrics)
 
 
 def _error(status: int, code: str, message: str, details: dict | None = None) -> HTTPException:
@@ -91,10 +145,14 @@ async def _collect_audio(state: AppState, speech: SpeechRequest):
     voice = state.voices.get(speech.voice_id)
     if speech.voice_id and voice is None:
         raise _error(404, "voice_not_found", "The requested local voice does not exist")
+    manifest = provider.manifest()
+    health_before = await provider.health()
     chunks = []
     started = time.perf_counter()
     first_chunk_at = None
+    acquired_at = None
     async with state.scheduler.slot():
+        acquired_at = time.perf_counter()
         try:
             async for chunk in provider.synthesize(speech, voice, selection.variant):
                 if first_chunk_at is None:
@@ -104,14 +162,25 @@ async def _collect_audio(state: AppState, speech: SpeechRequest):
             raise _error(422, "synthesis_failed", str(exc)) from exc
     elapsed = time.perf_counter() - started
     audio_seconds = sum(chunk.duration_ms for chunk in chunks) / 1000
-    state.last_metrics = {
+    metrics = {
         "provider_id": selection.provider_id,
         "variant_id": selection.variant.id,
         "ttfa_ms": round(((first_chunk_at or time.perf_counter()) - started) * 1000, 2),
+        "inference_ttfa_ms": round(
+            ((first_chunk_at or time.perf_counter()) - (acquired_at or started)) * 1000, 2
+        ),
+        "queue_wait_ms": round(((acquired_at or started) - started) * 1000, 2),
         "rtf": round(elapsed / audio_seconds, 4) if audio_seconds else None,
         "audio_seconds": round(audio_seconds, 3),
         "elapsed_seconds": round(elapsed, 3),
+        "warm_before": bool(health_before.get("loaded")),
+        "supports_audio_stream": manifest.supports_audio_stream,
+        "delivery_mode": (
+            "native_stream" if manifest.supports_audio_stream else "post_generation_chunks"
+        ),
+        "recorded_at_ms": int(time.time() * 1000),
     }
+    state.record_metrics(metrics)
     return chunks, selection
 
 
@@ -121,10 +190,14 @@ async def _stream_audio(state: AppState, speech: SpeechRequest) -> AsyncIterator
     voice = state.voices.get(speech.voice_id)
     if speech.voice_id and voice is None:
         raise _error(404, "voice_not_found", "The requested local voice does not exist")
+    manifest = provider.manifest()
+    health_before = await provider.health()
     started = time.perf_counter()
     first = None
     audio_ms = 0.0
+    acquired_at = None
     async with state.scheduler.slot():
+        acquired_at = time.perf_counter()
         try:
             async for chunk in provider.synthesize(speech, voice, selection.variant):
                 first = first or time.perf_counter()
@@ -133,21 +206,42 @@ async def _stream_audio(state: AppState, speech: SpeechRequest) -> AsyncIterator
         except (RuntimeError, ValueError) as exc:
             raise _error(422, "synthesis_failed", str(exc)) from exc
     elapsed = time.perf_counter() - started
-    state.last_metrics = {
+    state.record_metrics({
         "provider_id": selection.provider_id,
         "variant_id": selection.variant.id,
         "ttfa_ms": round(((first or time.perf_counter()) - started) * 1000, 2),
+        "inference_ttfa_ms": round(
+            ((first or time.perf_counter()) - (acquired_at or started)) * 1000, 2
+        ),
+        "queue_wait_ms": round(((acquired_at or started) - started) * 1000, 2),
         "rtf": round(elapsed / (audio_ms / 1000), 4) if audio_ms else None,
-    }
+        "warm_before": bool(health_before.get("loaded")),
+        "supports_audio_stream": manifest.supports_audio_stream,
+        "delivery_mode": (
+            "native_stream" if manifest.supports_audio_stream else "post_generation_chunks"
+        ),
+        "recorded_at_ms": int(time.time() * 1000),
+    })
 
 
 def create_app(data_dir: Path | None = None) -> FastAPI:
     root = data_dir or Path(os.getenv("VOICE2_DATA_DIR", ".voice2-data"))
     state = AppState(root.resolve())
+
+    @asynccontextmanager
+    async def lifespan(_: FastAPI):
+        state.schedule_prewarm()
+        yield
+        if state.prewarm_task is not None and not state.prewarm_task.done():
+            state.prewarm_task.cancel()
+            await asyncio.gather(state.prewarm_task, return_exceptions=True)
+        await state.registry.stop_all()
+
     app = FastAPI(
         title="Voice2 API",
         version=__version__,
         description="Hardware-adaptive local speech generation and realtime session API",
+        lifespan=lifespan,
     )
     app.state.voice2 = state
     app.add_middleware(
@@ -273,12 +367,21 @@ def create_app(data_dir: Path | None = None) -> FastAPI:
     async def update_profile(payload: ProfileUpdate):
         state.profiles.set(payload.profile, payload.custom)
         selection = state.refresh_selection(payload.profile)
+        state.schedule_prewarm()
         return {
             "active": payload.profile,
             "provider_id": selection.provider_id,
             "variant": selection.variant,
             "reason": selection.reason,
+            "prewarm": state.prewarm_status,
         }
+
+    @app.post("/api/v1/runtime/prewarm")
+    async def prewarm():
+        await state.prewarm()
+        if state.prewarm_status.get("state") == "error":
+            raise _error(422, "prewarm_failed", str(state.prewarm_status.get("error")))
+        return state.prewarm_status
 
     @app.post("/api/v1/runtime/benchmark")
     async def benchmark():
@@ -304,6 +407,8 @@ def create_app(data_dir: Path | None = None) -> FastAPI:
     @app.get("/api/v1/runtime/status")
     async def runtime_status():
         selection = state.refresh_selection()
+        provider = state.registry.tts(selection.provider_id)
+        manifest = provider.manifest()
         return {
             "profile": state.profiles.active,
             "provider_id": selection.provider_id,
@@ -312,6 +417,17 @@ def create_app(data_dir: Path | None = None) -> FastAPI:
             "realtime_expected": selection.realtime_expected,
             "queue": state.scheduler.status,
             "last_metrics": state.last_metrics,
+            "metrics_history": list(state.metrics_history),
+            "prewarm": state.prewarm_status,
+            "provider_health": await provider.health(),
+            "capabilities": {
+                "supports_text_stream": manifest.supports_text_stream,
+                "supports_audio_stream": manifest.supports_audio_stream,
+                "supports_cancel": manifest.supports_cancel,
+            },
+            "exclusions": state.profiles.exclusions(
+                state.registry.manifests(), state.hardware
+            ),
             "hardware_fingerprint": state.hardware.fingerprint,
         }
 

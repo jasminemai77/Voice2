@@ -11,7 +11,8 @@ type Hardware = {
 };
 type Provider = {
   id: string; name: string; license: string; available: boolean; availability_reason?: string;
-  languages: string[]; variants: { id: string; device: string; precision: string }[];
+  languages: string[]; supports_audio_stream: boolean;
+  variants: { id: string; device: string; precision: string }[];
 };
 type Voice = { id: string; name: string; language: string; duration_seconds?: number };
 type Status = {
@@ -19,7 +20,14 @@ type Status = {
   variant: { id: string; device: string; precision: string };
   selection_reason: string; realtime_expected: boolean;
   queue: { active: number; waiting: number; queue_limit: number };
-  last_metrics: { ttfa_ms?: number; rtf?: number };
+  last_metrics: {
+    ttfa_ms?: number; inference_ttfa_ms?: number; queue_wait_ms?: number; rtf?: number;
+    warm_before?: boolean; delivery_mode?: string;
+  };
+  prewarm: { state: string; provider_id?: string; variant_id?: string; elapsed_seconds?: number; error?: string };
+  provider_health: { ready: boolean; loaded: boolean; mode?: string };
+  capabilities: { supports_audio_stream: boolean; supports_text_stream: boolean; supports_cancel: boolean };
+  exclusions: { provider_id: string; variant_id?: string; reason: string }[];
 };
 
 async function api<T>(path: string, init?: RequestInit): Promise<T> {
@@ -70,6 +78,13 @@ export default function Home() {
     return () => window.clearTimeout(task);
   }, [refresh]);
   useEffect(() => () => { if (audioUrl) URL.revokeObjectURL(audioUrl); }, [audioUrl]);
+  useEffect(() => {
+    if (status?.prewarm.state !== "warming") return;
+    const timer = window.setInterval(() => {
+      void api<Status>("/api/v1/runtime/status").then(setStatus).catch(() => undefined);
+    }, 1500);
+    return () => window.clearInterval(timer);
+  }, [status?.prewarm.state]);
   const activeProvider = useMemo(() => providers.find((item) => item.id === status?.provider_id), [providers, status]);
 
   async function switchProfile(value: string) {
@@ -121,6 +136,14 @@ export default function Home() {
     } catch (error) { setNotice((error as Error).message); } finally { setBusy(""); }
   }
 
+  async function prewarm() {
+    setBusy("prewarm"); setNotice("Prewarming the selected local model...");
+    try {
+      const result = await api<{ state: string; elapsed_seconds?: number }>("/api/v1/runtime/prewarm", { method: "POST" });
+      setNotice(`Prewarm ${result.state} · ${result.elapsed_seconds ?? 0}s`); await refresh();
+    } catch (error) { setNotice((error as Error).message); } finally { setBusy(""); }
+  }
+
   return (
     <main>
       <header className="topbar">
@@ -150,9 +173,19 @@ export default function Home() {
         <aside className="panel telemetry">
           <div className="panel-title"><div><small>02 / RUNTIME</small><h2>性能面板</h2></div></div>
           <div className="profile-tabs">{["auto", "fast", "quality", "custom"].map((item) => <button key={item} className={profile === item ? "active" : ""} disabled={!!busy} onClick={() => switchProfile(item)}>{item}</button>)}</div>
+          <div className="runtime-state">
+            <div><span>WARM STATE</span><strong className={status?.prewarm.state === "ready" ? "good" : ""}>{status?.prewarm.state ?? "idle"}</strong></div>
+            <div><span>DELIVERY</span><strong>{status?.capabilities.supports_audio_stream ? "native stream" : "buffered chunks"}</strong></div>
+            <div><span>INFERENCE TTFA</span><strong>{status?.last_metrics.inference_ttfa_ms !== undefined ? `${status.last_metrics.inference_ttfa_ms} ms` : "—"}</strong></div>
+            <div><span>QUEUE WAIT</span><strong>{status?.last_metrics.queue_wait_ms !== undefined ? `${status.last_metrics.queue_wait_ms} ms` : "—"}</strong></div>
+            <div><span>LAST RUN</span><strong>{status?.last_metrics.warm_before === undefined ? "—" : status.last_metrics.warm_before ? "warm" : "cold"}</strong></div>
+            <div><span>REALTIME</span><strong className={status?.last_metrics.rtf !== undefined && status.last_metrics.rtf <= 1 ? "good" : ""}>{status?.last_metrics.rtf !== undefined ? `RTF ${status.last_metrics.rtf}` : "—"}</strong></div>
+          </div>
           <dl><div><dt>Provider</dt><dd>{activeProvider?.name ?? status?.provider_id ?? "—"}</dd></div><div><dt>Variant</dt><dd>{status?.variant.id ?? "—"}</dd></div><div><dt>Device / Precision</dt><dd>{status ? `${status.variant.device} / ${status.variant.precision}` : "—"}</dd></div><div><dt>TTFA</dt><dd>{status?.last_metrics.ttfa_ms ? `${status.last_metrics.ttfa_ms} ms` : "—"}</dd></div><div><dt>RTF</dt><dd>{status?.last_metrics.rtf ?? "—"}</dd></div><div><dt>Queue</dt><dd>{status ? `${status.queue.active} active · ${status.queue.waiting} wait` : "—"}</dd></div></dl>
+          <div className="runtime-actions"><button className="secondary" disabled={!!busy} onClick={prewarm}>{busy === "prewarm" ? "PREWARMING..." : "PREWARM MODEL"}</button></div>
           <button className="secondary" disabled={!!busy} onClick={benchmark}>{busy === "benchmark" ? "基准运行中…" : "重新运行短基准"}</button>
           {status && <p className="reason">{status.selection_reason}</p>}
+          {status?.exclusions.length ? <details className="exclusions"><summary>{status.exclusions.length} local variants excluded</summary>{status.exclusions.map((item, index) => <p key={`${item.provider_id}-${item.variant_id ?? index}`}><b>{item.provider_id}{item.variant_id ? ` / ${item.variant_id}` : ""}</b>{item.reason}</p>)}</details> : null}
         </aside>
       </section>
 

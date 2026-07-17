@@ -101,6 +101,10 @@ class ProfileManager:
                 "The custom provider variant is unavailable or exceeds the safe resource budget"
             )
 
+        real_candidates = [item for item in candidates if item[0].id != "demo"]
+        if real_candidates:
+            candidates = real_candidates
+
         def score(item: tuple[ProviderManifest, ProviderVariant]):
             if profile == PerformanceProfile.FAST:
                 return (item[1].speed_score, item[1].quality_score)
@@ -121,3 +125,42 @@ class ProfileManager:
             ),
             realtime_expected=variant.speed_score >= 0.75,
         )
+
+    def exclusions(
+        self, manifests: list[ProviderManifest], hardware: HardwareProfile
+    ) -> list[dict[str, str]]:
+        excluded: list[dict[str, str]] = []
+        ram_budget = max(0, hardware.available_ram_mib - 2048)
+        vram_budget = max((gpu.safe_budget_mib for gpu in hardware.gpus), default=0)
+        for manifest in manifests:
+            if not manifest.available:
+                excluded.append(
+                    {
+                        "provider_id": manifest.id,
+                        "reason": manifest.availability_reason or "Provider is unavailable",
+                    }
+                )
+                continue
+            for variant in manifest.variants:
+                reason = None
+                if variant.estimated_ram_mib > ram_budget:
+                    reason = (
+                        f"needs {variant.estimated_ram_mib} MiB RAM; "
+                        f"safe available budget is {ram_budget} MiB"
+                    )
+                elif variant.device == "cuda" and not hardware.cuda_available:
+                    reason = "requires CUDA, which is unavailable"
+                elif variant.device == "cuda" and variant.estimated_vram_mib > vram_budget:
+                    reason = (
+                        f"needs {variant.estimated_vram_mib} MiB VRAM; "
+                        f"safe budget is {vram_budget} MiB"
+                    )
+                if reason:
+                    excluded.append(
+                        {
+                            "provider_id": manifest.id,
+                            "variant_id": variant.id,
+                            "reason": reason,
+                        }
+                    )
+        return excluded
