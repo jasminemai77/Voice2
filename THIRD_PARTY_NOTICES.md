@@ -4,7 +4,7 @@ Voice2 source code is Apache-2.0. This file records evaluated integrations; incl
 
 | Component | Role | Upstream license | Default distribution |
 |---|---|---|---|
-| VoxCPM-0.5B | Optional zero-shot TTS | Apache-2.0 (verify model card at install time) | Not installed; no weights bundled |
+| VoxCPM runtime 2.0.3 / VoxCPM-0.5B revision `f67d35a…` | Optional zero-shot TTS | Apache-2.0 | Runtime and verified weights are local-only on G:; neither is bundled or committed |
 | CosyVoice | Planned TTS adapter | Apache-2.0 | Not bundled |
 | GPT-SoVITS | Research/backup adapter | MIT | Not bundled |
 | OpenVoice V2 | Planned low-resource adapter | MIT | Not bundled |
@@ -18,4 +18,3 @@ Voice2 source code is Apache-2.0. This file records evaluated integrations; incl
 | Tauri | Windows desktop shell | Apache-2.0/MIT | Build dependency |
 
 Before release, lock exact versions, preserve their notices, generate an SBOM, and verify each selected model repository because code and weights can use different terms.
-

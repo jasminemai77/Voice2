@@ -41,6 +41,20 @@ def test_safe_gpu_budget_formula(tmp_path: Path):
         assert gpu.safe_budget_mib <= gpu.free_vram_mib - 512
 
 
+def test_bf16_hardware_detection_without_api_torch():
+    ampere = GpuProfile(
+        index=0,
+        name="RTX 3060",
+        total_vram_mib=6144,
+        free_vram_mib=6144,
+        safe_budget_mib=5017,
+        compute_capability="8.6",
+    )
+    turing = ampere.model_copy(update={"name": "RTX 2060", "compute_capability": "7.5"})
+    assert HardwareDetector._supports_bf16_hardware([ampere]) is True
+    assert HardwareDetector._supports_bf16_hardware([turing]) is False
+
+
 def test_auto_profile_always_has_local_demo_fallback(tmp_path: Path):
     manager = ProfileManager(tmp_path)
     selected = manager.select(ProviderRegistry().manifests(), hardware(None))

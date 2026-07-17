@@ -65,3 +65,4 @@ __pycache__/
 .mypy_cache/
 .codex-dev*.log
 /src-tauri/target/
+/src-tauri/gen/

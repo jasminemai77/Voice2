@@ -91,6 +91,17 @@ class HardwareDetector:
             )
         return gpus
 
+    @staticmethod
+    def _supports_bf16_hardware(gpus: list[GpuProfile]) -> bool:
+        for gpu in gpus:
+            try:
+                major = int(str(gpu.compute_capability).split(".", maxsplit=1)[0])
+            except (TypeError, ValueError):
+                continue
+            if major >= 8:
+                return True
+        return False
+
     def detect(self) -> HardwareProfile:
         memory = psutil.virtual_memory()
         disk_root = self.data_dir.parent if self.data_dir.parent.exists() else Path.cwd()
@@ -99,7 +110,7 @@ class HardwareDetector:
         torch_version = self._package_version("torch")
         cuda_available = False
         cuda_version = None
-        bf16 = False
+        bf16 = self._supports_bf16_hardware(gpus)
         sdpa = False
         if torch_version:
             try:
@@ -107,7 +118,7 @@ class HardwareDetector:
 
                 cuda_available = bool(torch.cuda.is_available())
                 cuda_version = torch.version.cuda
-                bf16 = bool(cuda_available and torch.cuda.is_bf16_supported())
+                bf16 = bool(bf16 or (cuda_available and torch.cuda.is_bf16_supported()))
                 sdpa = hasattr(torch.nn.functional, "scaled_dot_product_attention")
             except (ImportError, RuntimeError):
                 pass

@@ -30,3 +30,16 @@ npm run desktop:build -- --no-bundle
 ```
 
 CI runs the same no-bundle desktop compile on `windows-latest`, in addition to Python and web quality gates.
+
+## Optional VoxCPM model process
+
+VoxCPM requires Python below 3.13, so it runs outside the Python 3.13 API environment. A typical local layout is:
+
+```powershell
+[Environment]::SetEnvironmentVariable("VOICE2_VOXCPM_PYTHON", "G:\Voice2Data\envs\voxcpm\Scripts\python.exe", "User")
+[Environment]::SetEnvironmentVariable("VOICE2_VOXCPM_MODEL", "G:\Voice2Data\models\VoxCPM-0.5B", "User")
+[Environment]::SetEnvironmentVariable("HF_HOME", "G:\Voice2Data\cache\huggingface", "User")
+[Environment]::SetEnvironmentVariable("TORCH_HOME", "G:\Voice2Data\cache\torch", "User")
+```
+
+Set `VOICE2_ENABLE_VOXCPM=1` only after the runtime passes dependency and CUDA checks. Availability does not bypass Voice2's measured RAM/VRAM safety budget.
