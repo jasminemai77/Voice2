@@ -386,8 +386,18 @@ def create_app(data_dir: Path | None = None) -> FastAPI:
     @app.post("/api/v1/runtime/benchmark")
     async def benchmark():
         started = time.perf_counter()
+        selection = state.refresh_selection()
+        voices = state.voices.list()
+        if selection.provider_id != "demo" and not voices:
+            raise _error(
+                422,
+                "benchmark_voice_required",
+                "Register a local reference voice before benchmarking this Provider",
+            )
         payload = SpeechRequest(
-            text="Voice2 性能检测。Performance check.", response_format="pcm"
+            text="Voice2 性能检测。Performance check.",
+            voice_id=voices[0].id if voices else None,
+            response_format="pcm",
         )
         chunks, selection = await asyncio.wait_for(_collect_audio(state, payload), timeout=60)
         elapsed = time.perf_counter() - started

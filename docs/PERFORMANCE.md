@@ -36,6 +36,20 @@ VRAM sampling, 100-run reliability, interruption latency, and a 30-minute soak t
 If no stable local variant reaches `RTF <= 1`, show the measured fastest result as
 non-realtime. Never silently use a remote service.
 
+## CosyVoice 300M on 6 GiB Windows CUDA
+
+CosyVoice has a true native audio-streaming interface, but capability does not imply a
+variant is safe on every GPU. On the current 6 GiB laptop GPU, the model loaded within
+budget but first inference exceeded the dynamic budget before yielding audio. Voice2
+therefore records the combination as unstable and excludes it on the matching stable
+hardware/runtime fingerprint. Changing free VRAM alone does not invalidate that
+fingerprint; driver, runtime, model or physical hardware changes do.
+
+The CUDA variant uses a conservative 5,376 MiB VRAM estimate until a new real-device
+benchmark proves a lower safe peak. The CPU variant reserves 8,192 MiB RAM. Neither
+variant is selected on the current machine, so OpenVoice remains the operational local
+fallback and is still labelled post-generation chunks rather than native streaming.
+
 ## Consented real-reference snapshot
 
 A local 25.4-second MP3 reference was evaluated without committing the source,

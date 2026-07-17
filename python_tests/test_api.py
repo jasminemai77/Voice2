@@ -3,10 +3,22 @@ import wave
 from pathlib import Path
 
 import numpy as np
+import pytest
 import soundfile
 from fastapi.testclient import TestClient
 
 from voice2.api import create_app
+
+
+@pytest.fixture(autouse=True)
+def disable_real_providers(monkeypatch: pytest.MonkeyPatch):
+    """Keep API contract tests independent from machine-local Provider settings."""
+    for variable in (
+        "VOICE2_ENABLE_OPENVOICE",
+        "VOICE2_ENABLE_VOXCPM",
+        "VOICE2_ENABLE_COSYVOICE",
+    ):
+        monkeypatch.delenv(variable, raising=False)
 
 
 def reference_wav(seconds: int = 5) -> bytes:
@@ -55,6 +67,10 @@ def test_health_hardware_and_speech(tmp_path: Path):
     prewarm = client.post("/api/v1/runtime/prewarm")
     assert prewarm.status_code == 200
     assert prewarm.json()["state"] == "ready"
+
+    benchmark = client.post("/api/v1/runtime/benchmark")
+    assert benchmark.status_code == 200
+    assert benchmark.json()["provider_id"] == "demo"
 
 
 def test_voice_consent_and_lifecycle(tmp_path: Path):

@@ -16,6 +16,29 @@ Evaluate every candidate on the same consented references and text set:
 
 Do not combine results across model versions, precisions, drivers or hardware fingerprints.
 
+## CosyVoice native-streaming adapter
+
+The adapter pins official CosyVoice source commit `074ca6dc9e80a2f424f1f74b48bdd7d3fea531cc`,
+Matcha-TTS submodule `dd9105b34bf2be2230f4aa1e4769fb586a3c824e`, and the
+Apache-2.0 CosyVoice-300M model revision
+`24c40509c3c5ea6fe06b5f8790ff99e3714a6bee`. The 12 model files total
+2,624,562,297 bytes and remain outside Git.
+
+The Windows worker runs in an independent Python 3.10 environment with PyTorch and
+torchaudio 2.3.1+cu121. It exposes upstream `stream=True` audio chunks through the same
+framed worker protocol as other local Providers. ModelScope WeText resources are
+downloaded during setup and forced to local-files-only during model loading and
+synthesis.
+
+On the current RTX 3060 Laptop 6 GiB device, static model loading increased GPU memory
+by about 2,363 MiB. Actual generation was not safe: the full 25.4-second reference
+reached about 5,859 MiB total GPU use, and a carefully aligned 7.76-second prompt still
+reached 5,672 MiB before the first audio chunk. The guard terminated both runs before
+OOM. TTFA, RTF and quality are therefore not reported. The manifest now reserves
+5,376 MiB for this Windows CUDA variant and the local failed benchmark prevents it
+from being automatically selected. CPU inference was not attempted because the
+8,192 MiB estimate exceeded the available-RAM-minus-2-GiB safety budget.
+
 ## OpenVoice experimental CPU fallback
 
 OpenVoice runtime commit `74a1d147` and the official MyShell OpenVoice V1 model commit

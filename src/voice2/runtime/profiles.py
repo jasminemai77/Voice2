@@ -12,11 +12,12 @@ from voice2.domain import HardwareProfile, PerformanceProfile, ProviderManifest,
 class BenchmarkResult(BaseModel):
     provider_id: str
     variant_id: str
-    ttfa_ms: float
-    rtf: float
+    ttfa_ms: float | None = None
+    rtf: float | None = None
     peak_vram_mib: int
     stable: bool
     realtime: bool
+    failure_reason: str | None = None
 
 
 @dataclass(slots=True)
@@ -31,6 +32,7 @@ class RuntimeSelection:
 class ProfileManager:
     def __init__(self, data_dir: Path) -> None:
         self.path = data_dir / "runtime-profile.json"
+        self.benchmark_dir = data_dir / "benchmark-results"
         self.active = PerformanceProfile.AUTO
         self.custom: dict[str, object] = {}
         self._load()
@@ -63,6 +65,37 @@ class ProfileManager:
             )
         return True
 
+    def benchmark_result(
+        self, hardware_fingerprint: str, provider_id: str, variant_id: str
+    ) -> BenchmarkResult | None:
+        path = (
+            self.benchmark_dir
+            / hardware_fingerprint
+            / f"{provider_id}--{variant_id}.json"
+        )
+        try:
+            return BenchmarkResult.model_validate_json(path.read_text(encoding="utf-8"))
+        except (OSError, ValueError):
+            return None
+
+    def record_benchmark(
+        self, hardware_fingerprint: str, result: BenchmarkResult
+    ) -> Path:
+        directory = self.benchmark_dir / hardware_fingerprint
+        directory.mkdir(parents=True, exist_ok=True)
+        path = directory / f"{result.provider_id}--{result.variant_id}.json"
+        path.write_text(result.model_dump_json(indent=2), encoding="utf-8")
+        return path
+
+    def _validated_for_hardware(
+        self,
+        manifest: ProviderManifest,
+        variant: ProviderVariant,
+        hardware: HardwareProfile,
+    ) -> bool:
+        result = self.benchmark_result(hardware.fingerprint, manifest.id, variant.id)
+        return result is None or result.stable
+
     def select(
         self,
         manifests: list[ProviderManifest],
@@ -78,6 +111,7 @@ class ProfileManager:
                 (manifest, variant)
                 for variant in manifest.variants
                 if self._fits(variant, hardware)
+                and self._validated_for_hardware(manifest, variant, hardware)
             )
         if not candidates:
             raise RuntimeError("No provider variant fits the current safe hardware budget")
@@ -143,7 +177,12 @@ class ProfileManager:
                 continue
             for variant in manifest.variants:
                 reason = None
-                if variant.estimated_ram_mib > ram_budget:
+                benchmark = self.benchmark_result(
+                    hardware.fingerprint, manifest.id, variant.id
+                )
+                if benchmark is not None and not benchmark.stable:
+                    reason = benchmark.failure_reason or "failed the current hardware benchmark"
+                elif variant.estimated_ram_mib > ram_budget:
                     reason = (
                         f"needs {variant.estimated_ram_mib} MiB RAM; "
                         f"safe available budget is {ram_budget} MiB"

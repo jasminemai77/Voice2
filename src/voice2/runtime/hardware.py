@@ -122,13 +122,23 @@ class HardwareDetector:
                 sdpa = hasattr(torch.nn.functional, "scaled_dot_product_attention")
             except (ImportError, RuntimeError):
                 pass
+        stable_gpus = [
+            {
+                "index": gpu.index,
+                "name": gpu.name,
+                "total_vram_mib": gpu.total_vram_mib,
+                "driver_version": gpu.driver_version,
+                "compute_capability": gpu.compute_capability,
+            }
+            for gpu in gpus
+        ]
         raw = {
             "os": platform.platform(),
             "architecture": platform.machine(),
             "cpu": platform.processor() or os.getenv("PROCESSOR_IDENTIFIER", "unknown"),
             "cores": psutil.cpu_count(logical=False) or 1,
             "logical": psutil.cpu_count(logical=True) or 1,
-            "gpus": [gpu.model_dump(mode="json") for gpu in gpus],
+            "gpus": stable_gpus,
             "torch": torch_version,
             "onnx": self._package_version("onnxruntime"),
         }

@@ -76,3 +76,19 @@ outside the repository:
 The Provider is experimental, CPU-only, and non-streaming. Its worker forces UTF-8,
 disables numba JIT, stores caches under `VOICE2_DATA_DIR`, and uses soundfile/scipy for
 reference audio instead of the upstream Whisper/PyAV path.
+
+## Optional CosyVoice native-streaming runtime
+
+CosyVoice uses an isolated Python 3.10 environment and pinned local source/model
+directories:
+
+```powershell
+[Environment]::SetEnvironmentVariable("VOICE2_COSYVOICE_PYTHON", "G:\Voice2Data\envs\cosyvoice\Scripts\python.exe", "User")
+[Environment]::SetEnvironmentVariable("VOICE2_COSYVOICE_SOURCE", "G:\Voice2Data\runtimes\CosyVoice", "User")
+[Environment]::SetEnvironmentVariable("VOICE2_COSYVOICE_MODEL", "G:\Voice2Data\models\CosyVoice-300M", "User")
+[Environment]::SetEnvironmentVariable("VOICE2_ENABLE_COSYVOICE", "1", "User")
+```
+
+Explicit enablement only registers the Provider. Hardware estimates and persisted
+benchmarks can still exclude every variant. Never reduce the VRAM estimate or delete a
+failed benchmark merely to force selection.

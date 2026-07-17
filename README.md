@@ -45,6 +45,22 @@ $env:VOICE2_ENABLE_VOXCPM="1"
 
 首次使用会由上游运行时下载配置的模型。可用 `VOICE2_VOXCPM_MODEL` 指定本地目录或模型 ID。下载前请确认上游模型许可证及磁盘空间；在生产使用前必须执行真实设备基准。
 
+## 启用 CosyVoice
+
+CosyVoice 是可选的原生音频流 Provider，使用独立 Python 3.10 进程。源码、模型、
+WeText 资源必须预先下载并固定版本；Voice2 不会在生成热路径中联网。
+
+```powershell
+$env:VOICE2_COSYVOICE_PYTHON="G:\Voice2Data\envs\cosyvoice\Scripts\python.exe"
+$env:VOICE2_COSYVOICE_SOURCE="G:\Voice2Data\runtimes\CosyVoice"
+$env:VOICE2_COSYVOICE_MODEL="G:\Voice2Data\models\CosyVoice-300M"
+$env:VOICE2_ENABLE_COSYVOICE="1"
+```
+
+“已启用”不等于“当前硬件可选择”。资源清单和当前硬件指纹下的失败基准仍会阻止
+不安全变体加载。RTX 3060 Laptop 6 GiB 的当前实测超过安全显存预算，因此继续使用
+OpenVoice CPU 回退。
+
 ## Windows 桌面
 
 ```powershell

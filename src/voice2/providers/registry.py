@@ -6,6 +6,7 @@ from importlib.metadata import entry_points
 from voice2.domain import ProviderKind, ProviderManifest
 
 from .base import BaseProvider, TtsProvider
+from .cosyvoice import CosyVoiceProvider
 from .demo import DemoTtsProvider
 from .openvoice import OpenVoiceProvider
 from .voxcpm import VoxCpmProvider
@@ -17,6 +18,7 @@ class ProviderRegistry:
         self.register(DemoTtsProvider())
         self.register(VoxCpmProvider())
         self.register(OpenVoiceProvider())
+        self.register(CosyVoiceProvider())
         self._load_entry_points()
 
     def _load_entry_points(self) -> None:
