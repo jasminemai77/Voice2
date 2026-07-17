@@ -48,6 +48,7 @@ next-env.d.ts
 /models/
 /voices/
 /Voice/
+/.agents/environment.local.md
 /generated/
 /benchmark-results/
 *.wav

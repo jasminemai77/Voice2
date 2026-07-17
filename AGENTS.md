@@ -1,5 +1,10 @@
 # Voice2 Agent instructions
 
+Before installing or changing local toolchains, read
+`.agents/environment.local.md` when it exists. It records machine-specific paths,
+verified versions, disk layout, and the last successful desktop build. The file is
+local-only and must not be committed.
+
 ## Scope and architecture
 
 - Preserve the modular monolith, independent model processes, and asynchronous event pipeline direction.
@@ -32,4 +37,3 @@ npm test
 ```
 
 Run targeted tests first, then the full suite. Do not commit models, audio, secrets, local databases, tuning caches, benchmark outputs, generated installers, or Python/Node/Rust build products.
-

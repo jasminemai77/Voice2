@@ -31,6 +31,23 @@ npm run desktop:build -- --no-bundle
 
 CI runs the same no-bundle desktop compile on `windows-latest`, in addition to Python and web quality gates.
 
+## VS Code and Codex
+
+Open the repository root, not the `src-tauri` subdirectory. After changing user
+environment variables, restart the IDE so Rust, Cargo and the G-drive build directory
+are inherited. The repository includes tasks under **Terminal > Run Task**:
+
+- `Voice2: Desktop Dev` starts the web dev server, Tauri window and local Python API.
+- `Voice2: API Server` and `Voice2: Web Dev` run the browser version as two separate
+  tasks.
+- `Voice2: Desktop Build (no bundle)` performs the same compile used by CI without
+  creating an installer.
+- `Voice2: Verify Desktop Toolchain` prints the detected Rust, MSVC and WebView2 state.
+
+Codex agents must read `.agents/environment.local.md` before proposing a toolchain
+installation. That file is ignored because its absolute paths and versions belong to
+one workstation.
+
 ## Optional VoxCPM model process
 
 VoxCPM requires Python below 3.13, so it runs outside the Python 3.13 API environment. A typical local layout is:
