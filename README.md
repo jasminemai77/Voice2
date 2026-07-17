@@ -72,9 +72,9 @@ python .agents/skills/integrate-realtime-provider/scripts/provider_contract.py -
 - [模型评测](docs/MODEL_EVALUATION.md)
 - [安全与授权](docs/SECURITY.md)
 - [路线图](docs/ROADMAP.md)
+- [开发环境与磁盘布局](docs/DEVELOPMENT.md)
 - [Agent 规则](AGENTS.md) 与 [实施计划规则](PLANS.md)
 
 ## 许可证
 
 项目代码采用 Apache-2.0。模型权重和第三方运行时可能采用不同许可证，见 [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md)。
-
